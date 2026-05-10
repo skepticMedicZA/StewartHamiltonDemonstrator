@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PiCCO Thermodilution Stewart-Hamilton Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #d9e2ef;
+      --primary: #1b6fd8;
+      --primary-dark: #1559ad;
+      --primary-soft: #e8f1ff;
+      --low: #b42318;
+      --normal: #087443;
+      --high: #b54708;
+      --warning-bg: #fff4e5;
+      --warning-line: #f7b267;
+      --danger-bg: #fff1f0;
+      --shadow: 0 16px 40px rgba(23, 32, 51, 0.08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(27, 111, 216, 0.12), transparent 34rem),
+        var(--bg);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 36px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #102a43 0%, #1b6fd8 100%);
+      color: #ffffff;
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.6rem, 3vw, 2.6rem);
+      line-height: 1.1;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 900px;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1rem;
+    }
+
+    .hero details {
+      margin-top: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 16px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .hero summary {
+      cursor: pointer;
+      font-weight: 700;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+    }
+
+    .hero .equation {
+      margin: 12px 0;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.14);
+      font-weight: 700;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(300px, 360px) 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .control-panel {
+      padding: 20px;
+      position: sticky;
+      top: 16px;
+    }
+
+    .panel h2,
+    .panel h3 {
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .panel h2 {
+      font-size: 1.2rem;
+    }
+
+    .hint {
+      margin: 6px 0 18px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .variable-row {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 12px;
+      background: #fbfdff;
+      transition: border 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .variable-row.is-solved {
+      background: var(--primary-soft);
+      border-color: rgba(27, 111, 216, 0.35);
+    }
+
+    .variable-row.is-invalid {
+      background: var(--danger-bg);
+      border-color: #ffb4ab;
+    }
+
+    .row-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .row-label {
+      font-weight: 800;
+    }
+
+    .row-unit {
+      display: block;
+      color: var(--muted);
+      font-size: 0.83rem;
+      font-weight: 600;
+    }
+
+    .lock-button {
+      min-width: 44px;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #ffffff;
+      color: var(--primary);
+      cursor: pointer;
+      display: inline-grid;
+      place-items: center;
+      font-size: 1.15rem;
+      transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+    }
+
+    .lock-button:hover,
+    .lock-button:focus-visible {
+      background: var(--primary);
+      color: #ffffff;
+      outline: none;
+    }
+
+    .lock-button.pulse {
+      animation: pulse-lock 260ms ease;
+    }
+
+    @keyframes pulse-lock {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.12); }
+      100% { transform: scale(1); }
+    }
+
+    .slider-line {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      min-height: 44px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    .value-pill {
+      min-width: 82px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #eef4ff;
+      color: var(--ink);
+      font-weight: 800;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .solved-value {
+      border-radius: 16px;
+      background: #ffffff;
+      padding: 12px;
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: var(--primary-dark);
+      border: 1px solid rgba(27, 111, 216, 0.2);
+      text-align: center;
+    }
+
+    .invalid-value {
+      border-radius: 16px;
+      background: #ffffff;
+      padding: 12px;
+      color: var(--low);
+      font-weight: 800;
+      border: 1px solid #ffb4ab;
+    }
+
+    .control-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .button {
+      min-height: 44px;
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      background: var(--primary);
+      color: #ffffff;
+      font-weight: 800;
+      cursor: pointer;
+      transition: background 160ms ease, transform 160ms ease;
+    }
+
+    .button:hover,
+    .button:focus-visible {
+      background: var(--primary-dark);
+      outline: none;
+    }
+
+    .button.secondary {
+      background: #eef2f7;
+      color: var(--ink);
+    }
+
+    .button.secondary:hover,
+    .button.secondary:focus-visible {
+      background: #dfe7f1;
+    }
+
+    .co-card {
+      border-radius: 18px;
+      padding: 16px;
+      background: #f7faff;
+      border: 1px solid var(--line);
+    }
+
+    .co-card .label {
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .co-value {
+      display: block;
+      margin-top: 4px;
+      font-size: 2rem;
+      font-weight: 950;
+      line-height: 1;
+    }
+
+    .co-low { color: var(--low); }
+    .co-normal { color: var(--normal); }
+    .co-high { color: var(--high); }
+    .co-invalid { color: var(--low); }
+
+    .interpretation {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    .main-stack {
+      display: grid;
+      gap: 20px;
+    }
+
+    .visual-panel,
+    .chart-panel {
+      padding: 20px;
+    }
+
+    .panel-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .state-badge {
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: var(--primary-dark);
+      background: var(--primary-soft);
+      white-space: nowrap;
+    }
+
+    .visual-wrap {
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #fbfdff 0%, #eef6ff 100%);
+      padding: 10px;
+      overflow: hidden;
+      transition: filter 180ms ease, opacity 180ms ease;
+    }
+
+    .visual-wrap.is-paused-invalid,
+    .chart-wrap.is-paused-invalid {
+      filter: grayscale(0.8);
+      opacity: 0.45;
+    }
+
+    svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .vessel-path {
+      fill: none;
+      stroke: #79aee8;
+      stroke-width: 18;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0.5;
+    }
+
+    .path-center {
+      fill: none;
+      stroke: #1b6fd8;
+      stroke-width: 4;
+      stroke-dasharray: 8 8;
+      opacity: 0.7;
+    }
+
+    .chamber {
+      fill: #ffffff;
+      stroke: #8db9e8;
+      stroke-width: 2;
+    }
+
+    .chamber-label {
+      fill: #172033;
+      font-size: 13px;
+      font-weight: 800;
+      text-anchor: middle;
+    }
+
+    .saline-dot {
+      fill: #0ea5e9;
+      stroke: #ffffff;
+      stroke-width: 3;
+      filter: drop-shadow(0 4px 8px rgba(14, 165, 233, 0.35));
+    }
+
+    .mix-dot {
+      fill: #67e8f9;
+      opacity: 0;
+      transition: opacity 160ms ease;
+    }
+
+    .mix-dot.is-visible {
+      opacity: 0.85;
+    }
+
+    .animation-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .time-readout {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .chart-wrap {
+      height: 380px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      background: #ffffff;
+      transition: filter 180ms ease, opacity 180ms ease;
+    }
+
+    .equation-panel {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 16px;
+      background: #f8fbff;
+      border: 1px solid var(--line);
+      overflow-x: auto;
+    }
+
+    .equation-panel code {
+      white-space: nowrap;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .equation-panel .unknown {
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-radius: 8px;
+      padding: 2px 6px;
+    }
+
+    .notice {
+      margin-top: 14px;
+      border-radius: 14px;
+      padding: 12px;
+      background: var(--warning-bg);
+      border: 1px solid var(--warning-line);
+      color: #7a3f00;
+      font-size: 0.92rem;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .control-panel {
+        position: static;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        width: min(100% - 20px, 1180px);
+        padding-top: 10px;
+      }
+
+      .hero,
+      .panel {
+        border-radius: 18px;
+      }
+
+      .hero {
+        padding: 20px;
+      }
+
+      .control-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .slider-line {
+        grid-template-columns: 1fr;
+      }
+
+      .value-pill {
+        width: 100%;
+      }
+
+      .panel-title-row,
+      .animation-controls {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .chart-wrap {
+        height: 310px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero" aria-labelledby="page-title">
+      <h1 id="page-title">PiCCO Thermodilution Cardiac Output Monitor</h1>
+      <p>
+        Explore the Stewart-Hamilton equation using cold saline thermodilution. Unlock any one variable to solve for it while the other three remain adjustable inputs.
+      </p>
+      <details open>
+        <summary>Clinical context and equation</summary>
+        <p>
+          In PiCCO monitoring, a known volume of cold saline is injected centrally. As it mixes with blood, an arterial thermistor records a temperature-time curve. The area under that curve is inversely related to cardiac output.
+        </p>
+        <div class="equation">
+          CO = [V<sub>i</sub> / 1000 &times; K &times; (T<sub>b</sub> - T<sub>i</sub>) &times; 60] / AUC
+        </div>
+        <p>
+          This demonstration fixes blood temperature at 37 &deg;C and K at 1.08. It is for education only and must not be used for clinical decision-making.
+        </p>
+      </details>
+    </section>
+
+    <div class="layout">
+      <section class="panel control-panel" aria-labelledby="controls-title">
+        <h2 id="controls-title">Equation Controls</h2>
+        <p class="hint">Open the lock on one variable to calculate it. The other three become inputs.</p>
+
+        <div id="variables" aria-live="polite"></div>
+
+        <div class="control-actions">
+          <button class="button secondary" id="resetButton" type="button">Reset Defaults</button>
+          <button class="button" id="downloadButton" type="button">Download Graph</button>
+        </div>
+
+        <article class="co-card" aria-live="polite">
+          <span class="label">Calculated cardiac output</span>
+          <span class="co-value" id="coValue">-- L/min</span>
+          <p class="interpretation" id="interpretation">Adjust inputs to calculate CO.</p>
+        </article>
+
+        <div class="equation-panel" aria-live="polite">
+          <code id="liveEquation"></code>
+        </div>
+
+        <div class="notice">
+          Normal adult resting cardiac output is approximately 4-8 L/min. Interpret values in context; this is a teaching model, not a diagnostic calculator.
+        </div>
+      </section>
+
+      <div class="main-stack">
+        <section class="panel visual-panel" aria-labelledby="visual-title">
+          <div class="panel-title-row">
+            <div>
+              <h2 id="visual-title">Vascular Transit Animation</h2>
+              <p class="hint">The cold saline bolus travels faster as calculated cardiac output rises.</p>
+            </div>
+            <span class="state-badge" id="durationBadge">Loop: -- s</span>
+          </div>
+
+          <div class="visual-wrap" id="visualWrap">
+            <svg viewBox="0 0 760 310" role="img" aria-labelledby="svgTitle svgDesc">
+              <title id="svgTitle">Simplified cardiopulmonary transit pathway</title>
+              <desc id="svgDesc">Cold saline moves from the right atrium through the right ventricle and pulmonary circulation to the left atrium.</desc>
+              <path id="routePath" class="vessel-path" d="M85 160 C145 70, 245 70, 300 150 S460 235, 525 155 S635 70, 690 150"></path>
+              <path class="path-center" d="M85 160 C145 70, 245 70, 300 150 S460 235, 525 155 S635 70, 690 150"></path>
+
+              <g>
+                <circle class="chamber" cx="85" cy="160" r="46"></circle>
+                <text class="chamber-label" x="85" y="156">Right</text>
+                <text class="chamber-label" x="85" y="173">Atrium</text>
+              </g>
+              <g>
+                <circle class="chamber" cx="242" cy="102" r="44"></circle>
+                <text class="chamber-label" x="242" y="98">Right</text>
+                <text class="chamber-label" x="242" y="115">Ventricle</text>
+              </g>
+              <g>
+                <rect class="chamber" x="318" y="118" width="112" height="68" rx="24"></rect>
+                <text class="chamber-label" x="374" y="148">Pulmonary</text>
+                <text class="chamber-label" x="374" y="165">Artery</text>
+              </g>
+              <g>
+                <rect class="chamber" x="448" y="176" width="132" height="70" rx="24"></rect>
+                <text class="chamber-label" x="514" y="207">Pulmonary</text>
+                <text class="chamber-label" x="514" y="224">Capillaries</text>
+              </g>
+              <g>
+                <rect class="chamber" x="574" y="88" width="94" height="66" rx="22"></rect>
+                <text class="chamber-label" x="621" y="116">Pulmonary</text>
+                <text class="chamber-label" x="621" y="133">Veins</text>
+              </g>
+              <g>
+                <circle class="chamber" cx="690" cy="150" r="44"></circle>
+                <text class="chamber-label" x="690" y="146">Left</text>
+                <text class="chamber-label" x="690" y="163">Atrium</text>
+              </g>
+
+              <circle class="mix-dot" id="mixDot1" cx="485" cy="194" r="6"></circle>
+              <circle class="mix-dot" id="mixDot2" cx="516" cy="218" r="5"></circle>
+              <circle class="mix-dot" id="mixDot3" cx="548" cy="198" r="6"></circle>
+              <circle class="mix-dot" id="mixDot4" cx="526" cy="236" r="4"></circle>
+              <circle class="saline-dot" id="salineDot" cx="85" cy="160" r="12"></circle>
+            </svg>
+          </div>
+
+          <div class="animation-controls">
+            <button class="button" id="playPauseButton" type="button">Pause Animation</button>
+            <span class="time-readout" id="timeReadout">Time: 0.0 s</span>
+          </div>
+        </section>
+
+        <section class="panel chart-panel" aria-labelledby="chart-title">
+          <div class="panel-title-row">
+            <div>
+              <h2 id="chart-title">Temperature-Time Curve</h2>
+              <p class="hint">Shaded area represents AUC in &deg;C&middot;s. The dashed marker stays synced with the transit animation.</p>
+            </div>
+            <span class="state-badge" id="aucBadge">AUC: -- &deg;C&middot;s</span>
+          </div>
+
+          <div class="chart-wrap" id="chartWrap">
+            <canvas id="temperatureChart" aria-label="Temperature-time thermodilution curve"></canvas>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const K = 1.08;
+    const T_BLOOD = 37;
+    const TIME_MAX = 60;
+    const TAU_SECONDS = 10;
+    const MIN_DURATION = 3;
+    const MAX_DURATION = 60;
+
+    const variables = {
+      co: {
+        label: 'Cardiac Output',
+        symbol: 'CO',
+        unit: 'L/min',
+        min: 1,
+        max: 20,
+        step: 0.1,
+        defaultValue: 5,
+        decimals: 1,
+        impossibleText: 'Calculated CO is outside the supported teaching range.'
+      },
+      vi: {
+        label: 'Injectate Volume',
+        symbol: 'V\u1d62',
+        unit: 'mL',
+        min: 10,
+        max: 20,
+        step: 1,
+        defaultValue: 15,
+        decimals: 0,
+        impossibleText: 'Required injectate volume is outside the 10-20 mL PiCCO teaching range.'
+      },
+      ti: {
+        label: 'Injectate Temperature',
+        symbol: 'T\u1d62',
+        unit: '\u00b0C',
+        min: 0,
+        max: 8,
+        step: 0.5,
+        defaultValue: 4,
+        decimals: 1,
+        impossibleText: 'Required injectate temperature is outside 0-8 \u00b0C or is not a cold injectate.'
+      },
+      auc: {
+        label: 'Area Under Curve',
+        symbol: 'AUC',
+        unit: '\u00b0C\u00b7s',
+        min: 3,
+        max: 12,
+        step: 0.5,
+        defaultValue: 6.4,
+        decimals: 1,
+        impossibleText: 'Required AUC must be positive and within the supported display range.'
+      }
+    };
+
+    const state = {
+      values: Object.fromEntries(Object.entries(variables).map(([key, config]) => [key, config.defaultValue])),
+      unknown: 'co',
+      solvedValue: null,
+      isValid: true,
+      invalidMessage: '',
+      isPlaying: true,
+      currentTime: 0,
+      lastTimestamp: null,
+      animationFrameId: null,
+      chart: null
+    };
+
+    const variableContainer = document.getElementById('variables');
+    const coValue = document.getElementById('coValue');
+    const interpretation = document.getElementById('interpretation');
+    const liveEquation = document.getElementById('liveEquation');
+    const durationBadge = document.getElementById('durationBadge');
+    const aucBadge = document.getElementById('aucBadge');
+    const playPauseButton = document.getElementById('playPauseButton');
+    const timeReadout = document.getElementById('timeReadout');
+    const salineDot = document.getElementById('salineDot');
+    const routePath = document.getElementById('routePath');
+    const visualWrap = document.getElementById('visualWrap');
+    const chartWrap = document.getElementById('chartWrap');
+    const mixDots = [...document.querySelectorAll('.mix-dot')];
+
+    function formatValue(key, value) {
+      const config = variables[key];
+      return `${Number(value).toFixed(config.decimals)} ${config.unit}`;
+    }
+
+    function solveFor(unknown, values) {
+      const dT = T_BLOOD - values.ti;
+
+      if (dT <= 0 || values.vi <= 0 || values.auc <= 0 || values.co <= 0) {
+        return Number.NaN;
+      }
+
+      switch (unknown) {
+        case 'co':
+          return ((values.vi / 1000) * K * dT * 60) / values.auc;
+        case 'vi':
+          return (values.co * values.auc * 1000) / (K * dT * 60);
+        case 'ti':
+          return T_BLOOD - (values.co * values.auc * 1000) / (values.vi * K * 60);
+        case 'auc':
+          return ((values.vi / 1000) * K * dT * 60) / values.co;
+        default:
+          return Number.NaN;
+      }
+    }
+
+    function isSolvedValueValid(key, value) {
+      if (!Number.isFinite(value)) {
+        return false;
+      }
+
+      const config = variables[key];
+      if (key === 'auc') {
+        return value > 0 && value >= config.min && value <= config.max;
+      }
+
+      if (key === 'ti') {
+        return value >= config.min && value <= config.max && value < T_BLOOD;
+      }
+
+      return value >= config.min && value <= config.max;
+    }
+
+    function getActiveValues() {
+      return {
+        ...state.values,
+        [state.unknown]: state.solvedValue
+      };
+    }
+
+    function calculateState() {
+      const solved = solveFor(state.unknown, state.values);
+      state.solvedValue = solved;
+      state.isValid = isSolvedValueValid(state.unknown, solved);
+      state.invalidMessage = state.isValid ? '' : variables[state.unknown].impossibleText;
+    }
+
+    function interpretCO(co) {
+      if (!state.isValid || !Number.isFinite(co)) {
+        return {
+          className: 'co-invalid',
+          message: 'Impossible configuration. Adjust the locked input sliders.'
+        };
+      }
+
+      if (co < 4) {
+        return {
+          className: 'co-low',
+          message: 'Low cardiac output pattern - consider reduced pump function or hypovolaemia in clinical context.'
+        };
+      }
+
+      if (co <= 8) {
+        return {
+          className: 'co-normal',
+          message: 'Normal adult resting cardiac output range.'
+        };
+      }
+
+      return {
+        className: 'co-high',
+        message: 'High cardiac output pattern - may fit hyperdynamic states in clinical context.'
+      };
+    }
+
+    function createVariableRow(key) {
+      const config = variables[key];
+      const row = document.createElement('article');
+      row.className = 'variable-row';
+      row.id = `row-${key}`;
+
+      row.innerHTML = `
+        <div class="row-header">
+          <div>
+            <span class="row-label">${config.label}</span>
+            <span class="row-unit">${config.symbol} &middot; ${config.unit}</span>
+          </div>
+          <button class="lock-button" type="button" data-lock="${key}" aria-label="Unlock ${config.label} to solve for it"></button>
+        </div>
+        <div class="control-slot" id="slot-${key}"></div>
+      `;
+
+      variableContainer.appendChild(row);
+    }
+
+    function renderControls() {
+      Object.keys(variables).forEach((key) => {
+        const config = variables[key];
+        const row = document.getElementById(`row-${key}`);
+        const slot = document.getElementById(`slot-${key}`);
+        const button = row.querySelector('[data-lock]');
+        const isUnknown = key === state.unknown;
+
+        row.classList.toggle('is-solved', isUnknown);
+        row.classList.toggle('is-invalid', isUnknown && !state.isValid);
+        button.textContent = isUnknown ? '\ud83d\udd13' : '\ud83d\udd12';
+        button.setAttribute('aria-pressed', String(isUnknown));
+        button.setAttribute('title', isUnknown ? `${config.label} is being calculated` : `Solve for ${config.label}`);
+
+        if (isUnknown) {
+          slot.innerHTML = state.isValid
+            ? `<div class="solved-value">${formatValue(key, state.solvedValue)}</div>`
+            : `<div class="invalid-value">${state.invalidMessage}</div>`;
+          return;
+        }
+
+        slot.innerHTML = `
+          <div class="slider-line">
+            <label class="sr-only" for="slider-${key}">${config.label}</label>
+            <input
+              id="slider-${key}"
+              type="range"
+              min="${config.min}"
+              max="${config.max}"
+              step="${config.step}"
+              value="${state.values[key]}"
+              data-slider="${key}"
+            >
+            <span class="value-pill" id="display-${key}">${formatValue(key, state.values[key])}</span>
+          </div>
+        `;
+      });
+    }
+
+    function refreshControls() {
+      Object.keys(variables).forEach((key) => {
+        const row = document.getElementById(`row-${key}`);
+        const slot = document.getElementById(`slot-${key}`);
+        const button = row.querySelector('[data-lock]');
+        const isUnknown = key === state.unknown;
+
+        row.classList.toggle('is-solved', isUnknown);
+        row.classList.toggle('is-invalid', isUnknown && !state.isValid);
+        button.textContent = isUnknown ? '\ud83d\udd13' : '\ud83d\udd12';
+        button.setAttribute('aria-pressed', String(isUnknown));
+
+        if (isUnknown) {
+          slot.innerHTML = state.isValid
+            ? `<div class="solved-value">${formatValue(key, state.solvedValue)}</div>`
+            : `<div class="invalid-value">${state.invalidMessage}</div>`;
+          return;
+        }
+
+        const slider = document.getElementById(`slider-${key}`);
+        const display = document.getElementById(`display-${key}`);
+        if (slider && document.activeElement !== slider) {
+          slider.value = state.values[key];
+        }
+        if (display) {
+          display.textContent = formatValue(key, state.values[key]);
+        }
+      });
+    }
+
+    function generateCurve(aucValue) {
+      const points = [];
+      const dt = 0.5;
+      const finiteIntegral = TAU_SECONDS * (1 - Math.exp(-TIME_MAX / TAU_SECONDS));
+      const c0 = aucValue / finiteIntegral;
+
+      for (let t = 0; t <= TIME_MAX; t += dt) {
+        points.push({ x: Number(t.toFixed(1)), y: c0 * Math.exp(-t / TAU_SECONDS) });
+      }
+
+      return points;
+    }
+
+    const timeMarkerPlugin = {
+      id: 'timeMarker',
+      afterDraw(chart) {
+        if (!state.isValid) {
+          return;
+        }
+
+        const xScale = chart.scales.x;
+        const ctx = chart.ctx;
+        const xPixel = xScale.getPixelForValue(Math.min(state.currentTime, TIME_MAX));
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(xPixel, chart.chartArea.top);
+        ctx.lineTo(xPixel, chart.chartArea.bottom);
+        ctx.strokeStyle = 'rgba(180, 35, 24, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 6]);
+        ctx.stroke();
+        ctx.restore();
+      }
+    };
+
+    function initChart() {
+      const ctx = document.getElementById('temperatureChart');
+      state.chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            data: [],
+            parsing: false,
+            label: 'Temperature change',
+            borderColor: '#1b6fd8',
+            backgroundColor: 'rgba(27, 111, 216, 0.16)',
+            pointRadius: 0,
+            borderWidth: 3,
+            tension: 0.35,
+            fill: true
+          }]
+        },
+        options: {
+          animation: false,
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            intersect: false,
+            mode: 'nearest'
+          },
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label(context) {
+                  return `Temperature change: ${context.parsed.y.toFixed(2)} \u00b0C`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              min: 0,
+              max: TIME_MAX,
+              title: {
+                display: true,
+                text: 'Time (seconds)'
+              }
+            },
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: '\u0394Temperature (\u00b0C)'
+              }
+            }
+          }
+        },
+        plugins: [timeMarkerPlugin]
+      });
+    }
+
+    function updateChart(activeValues) {
+      if (!state.chart) {
+        return;
+      }
+
+      if (!state.isValid) {
+        state.chart.data.datasets[0].data = [];
+        state.chart.update('none');
+        return;
+      }
+
+      const points = generateCurve(activeValues.auc);
+      state.chart.data.datasets[0].data = points;
+      state.chart.options.scales.y.suggestedMax = Math.max(...points.map((point) => point.y)) * 1.2;
+      state.chart.update('none');
+    }
+
+    function getAnimationDuration(co) {
+      if (!Number.isFinite(co) || co <= 0) {
+        return MAX_DURATION;
+      }
+
+      return Math.min(MAX_DURATION, Math.max(MIN_DURATION, 60 / co));
+    }
+
+    function updateAnimationPosition(progress) {
+      const length = routePath.getTotalLength();
+      const point = routePath.getPointAtLength(length * progress);
+      salineDot.setAttribute('cx', point.x);
+      salineDot.setAttribute('cy', point.y);
+
+      const isMixing = progress > 0.54 && progress < 0.78;
+      mixDots.forEach((dot, index) => {
+        dot.classList.toggle('is-visible', isMixing);
+        dot.style.transform = isMixing ? `translate(${Math.sin(progress * 20 + index) * 3}px, ${Math.cos(progress * 18 + index) * 3}px)` : '';
+      });
+    }
+
+    function animate(timestamp) {
+      if (!state.lastTimestamp) {
+        state.lastTimestamp = timestamp;
+      }
+
+      const deltaTime = (timestamp - state.lastTimestamp) / 1000;
+      state.lastTimestamp = timestamp;
+
+      const activeValues = getActiveValues();
+      const duration = getAnimationDuration(activeValues.co);
+
+      if (state.isValid && state.isPlaying) {
+        state.currentTime += deltaTime;
+        if (state.currentTime > duration) {
+          state.currentTime %= duration;
+        }
+
+        updateAnimationPosition(state.currentTime / duration);
+        timeReadout.textContent = `Time: ${state.currentTime.toFixed(1)} s`;
+        if (state.chart) {
+          state.chart.draw();
+        }
+      }
+
+      state.animationFrameId = requestAnimationFrame(animate);
+    }
+
+    function updateStatus(activeValues) {
+      const co = activeValues.co;
+      const coStatus = interpretCO(co);
+      coValue.className = `co-value ${coStatus.className}`;
+      coValue.textContent = state.isValid && Number.isFinite(co) ? `${co.toFixed(1)} L/min` : '-- L/min';
+      interpretation.textContent = state.isValid ? coStatus.message : state.invalidMessage;
+
+      durationBadge.textContent = state.isValid
+        ? `Loop: ${getAnimationDuration(co).toFixed(1)} s`
+        : 'Loop paused';
+      aucBadge.textContent = state.isValid
+        ? `AUC: ${activeValues.auc.toFixed(1)} \u00b0C\u00b7s`
+        : 'AUC: invalid';
+
+      visualWrap.classList.toggle('is-paused-invalid', !state.isValid);
+      chartWrap.classList.toggle('is-paused-invalid', !state.isValid);
+      playPauseButton.disabled = !state.isValid;
+      playPauseButton.textContent = state.isPlaying ? 'Pause Animation' : 'Play Animation';
+    }
+
+    function updateEquation(activeValues) {
+      if (!state.isValid) {
+        liveEquation.innerHTML = `<span class="unknown">Cannot solve ${variables[state.unknown].symbol}</span>: ${state.invalidMessage}`;
+        return;
+      }
+
+      const parts = {
+        co: `${activeValues.co.toFixed(1)} L/min`,
+        vi: `${activeValues.vi.toFixed(0)} mL`,
+        ti: `${activeValues.ti.toFixed(1)} \u00b0C`,
+        auc: `${activeValues.auc.toFixed(1)} \u00b0C\u00b7s`
+      };
+
+      const highlight = (key, text) => key === state.unknown ? `<span class="unknown">${text}</span>` : text;
+      liveEquation.innerHTML =
+        `${highlight('co', parts.co)} = [${highlight('vi', parts.vi)} / 1000 &times; 1.08 &times; (37 - ${highlight('ti', parts.ti)}) &times; 60] / ${highlight('auc', parts.auc)}`;
+    }
+
+    function updateAll({ rerenderControls = true } = {}) {
+      calculateState();
+      const activeValues = getActiveValues();
+      if (rerenderControls) {
+        renderControls();
+      } else {
+        refreshControls();
+      }
+      updateStatus(activeValues);
+      updateEquation(activeValues);
+      updateChart(activeValues);
+
+      if (!state.isValid) {
+        state.currentTime = 0;
+        updateAnimationPosition(0);
+      }
+    }
+
+    function setUnknown(key) {
+      if (key === state.unknown) {
+        return;
+      }
+
+      if (state.isValid && Number.isFinite(state.solvedValue)) {
+        state.values[state.unknown] = Number(state.solvedValue.toFixed(variables[state.unknown].decimals));
+      }
+
+      state.unknown = key;
+      state.currentTime = 0;
+      updateAll();
+
+      const button = document.querySelector(`[data-lock="${key}"]`);
+      if (button) {
+        button.classList.add('pulse');
+        setTimeout(() => button.classList.remove('pulse'), 280);
+      }
+    }
+
+    function resetDefaults() {
+      state.values = Object.fromEntries(Object.entries(variables).map(([key, config]) => [key, config.defaultValue]));
+      state.unknown = 'co';
+      state.currentTime = 0;
+      state.isPlaying = true;
+      updateAll();
+    }
+
+    function downloadGraph() {
+      const canvas = document.getElementById('temperatureChart');
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = 'stewart-hamilton-temperature-curve.png';
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    variableContainer.addEventListener('input', (event) => {
+      const key = event.target.dataset.slider;
+      if (!key) {
+        return;
+      }
+
+      state.values[key] = Number(event.target.value);
+      state.currentTime = 0;
+      updateAll({ rerenderControls: false });
+    });
+
+    variableContainer.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-lock]');
+      if (!button) {
+        return;
+      }
+
+      setUnknown(button.dataset.lock);
+    });
+
+    document.getElementById('resetButton').addEventListener('click', resetDefaults);
+    document.getElementById('downloadButton').addEventListener('click', downloadGraph);
+    playPauseButton.addEventListener('click', () => {
+      state.isPlaying = !state.isPlaying;
+      state.lastTimestamp = null;
+      updateStatus(getActiveValues());
+    });
+
+    Object.keys(variables).forEach(createVariableRow);
+    initChart();
+    updateAll();
+    state.animationFrameId = requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
