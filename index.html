@@ -4,24 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PiCCO Thermodilution Stewart-Hamilton Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
+    /* Design tokens: Google Stitch project PiCCO Thermodilution Simulator (Clinical Precision System) */
     :root {
-      --bg: #f4f7fb;
+      --bg: #fdf8f8;
+      --surface-low: #f7f3f2;
+      --surface-container: #f1edec;
       --panel: #ffffff;
-      --ink: #172033;
-      --muted: #667085;
-      --line: #d9e2ef;
-      --primary: #1b6fd8;
-      --primary-dark: #1559ad;
-      --primary-soft: #e8f1ff;
-      --low: #b42318;
-      --normal: #087443;
-      --high: #b54708;
-      --warning-bg: #fff4e5;
-      --warning-line: #f7b267;
-      --danger-bg: #fff1f0;
-      --shadow: 0 16px 40px rgba(23, 32, 51, 0.08);
+      --ink: #1c1b1b;
+      --muted: #444748;
+      --muted-strong: #5d5f5f;
+      --line: #1a1a1a;
+      --line-subtle: #c4c7c7;
+      --primary: #1a1a1a;
+      --primary-dark: #000000;
+      --primary-soft: #f5f5f5;
+      --on-primary: #ffffff;
+      --low: #d32f2f;
+      --normal: #388e3c;
+      --high: #f57c00;
+      --warning-bg: #fff3e0;
+      --warning-line: #f57c00;
+      --danger-bg: #ffdad6;
+      --border: 2px solid var(--line);
+      --radius: 0;
+      --shadow: none;
+      --chart-grid: #e0e0e0;
+      --font-mono: "JetBrains Mono", ui-monospace, monospace;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -32,9 +45,7 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background:
-        radial-gradient(circle at top left, rgba(27, 111, 216, 0.12), transparent 34rem),
-        var(--bg);
+      background: var(--bg);
       color: var(--ink);
       line-height: 1.5;
     }
@@ -51,38 +62,42 @@
     }
 
     .hero {
-      background: linear-gradient(135deg, #102a43 0%, #1b6fd8 100%);
-      color: #ffffff;
-      border-radius: 24px;
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: var(--radius);
       padding: 28px;
-      box-shadow: var(--shadow);
+      border: var(--border);
       margin-bottom: 20px;
     }
 
     .hero h1 {
       margin: 0 0 10px;
-      font-size: clamp(1.6rem, 3vw, 2.6rem);
-      line-height: 1.1;
+      font-size: clamp(1.6rem, 3vw, 2.1rem);
+      line-height: 1.15;
+      font-weight: 700;
     }
 
     .hero p {
       margin: 0;
       max-width: 900px;
-      color: rgba(255, 255, 255, 0.9);
+      color: var(--muted);
       font-size: 1rem;
     }
 
     .hero details {
       margin-top: 18px;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 16px;
+      border: 2px solid var(--line-subtle);
+      border-radius: var(--radius);
       padding: 12px 16px;
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--surface-low);
     }
 
     .hero summary {
       cursor: pointer;
       font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
       min-height: 44px;
       display: flex;
       align-items: center;
@@ -91,9 +106,12 @@
     .hero .equation {
       margin: 12px 0;
       padding: 12px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius);
+      background: var(--surface-container);
+      border: 2px solid var(--line-subtle);
       font-weight: 700;
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
       overflow-x: auto;
       white-space: nowrap;
     }
@@ -107,8 +125,8 @@
 
     .panel {
       background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 22px;
+      border: var(--border);
+      border-radius: var(--radius);
       box-shadow: var(--shadow);
     }
 
@@ -135,22 +153,22 @@
     }
 
     .variable-row {
-      border: 1px solid var(--line);
-      border-radius: 18px;
+      border: var(--border);
+      border-radius: var(--radius);
       padding: 14px;
       margin-bottom: 12px;
-      background: #fbfdff;
+      background: var(--surface-low);
       transition: border 160ms ease, background 160ms ease, transform 160ms ease;
     }
 
     .variable-row.is-solved {
       background: var(--primary-soft);
-      border-color: rgba(27, 111, 216, 0.35);
+      border: 3px solid var(--primary-dark);
     }
 
     .variable-row.is-invalid {
       background: var(--danger-bg);
-      border-color: #ffb4ab;
+      border-color: var(--low);
     }
 
     .row-header {
@@ -175,10 +193,10 @@
     .lock-button {
       min-width: 44px;
       min-height: 44px;
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      background: #ffffff;
-      color: var(--primary);
+      border: var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--primary-dark);
       cursor: pointer;
       display: inline-grid;
       place-items: center;
@@ -188,8 +206,8 @@
 
     .lock-button:hover,
     .lock-button:focus-visible {
-      background: var(--primary);
-      color: #ffffff;
+      background: var(--primary-dark);
+      color: var(--on-primary);
       outline: none;
     }
 
@@ -220,32 +238,37 @@
     .value-pill {
       min-width: 82px;
       padding: 7px 10px;
-      border-radius: 999px;
-      background: #eef4ff;
+      border-radius: var(--radius);
+      border: 2px solid var(--line-subtle);
+      background: var(--surface-container);
       color: var(--ink);
-      font-weight: 800;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
       text-align: center;
       white-space: nowrap;
     }
 
     .solved-value {
-      border-radius: 16px;
-      background: #ffffff;
+      border-radius: var(--radius);
+      background: var(--panel);
       padding: 12px;
-      font-size: 1.45rem;
-      font-weight: 900;
+      font-size: 1.35rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
       color: var(--primary-dark);
-      border: 1px solid rgba(27, 111, 216, 0.2);
+      border: var(--border);
       text-align: center;
     }
 
     .invalid-value {
-      border-radius: 16px;
-      background: #ffffff;
+      border-radius: var(--radius);
+      background: var(--danger-bg);
       padding: 12px;
       color: var(--low);
-      font-weight: 800;
-      border: 1px solid #ffb4ab;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      border: 2px solid var(--low);
     }
 
     .control-actions {
@@ -257,14 +280,17 @@
 
     .button {
       min-height: 44px;
-      border: 0;
-      border-radius: 12px;
+      border: var(--border);
+      border-radius: var(--radius);
       padding: 10px 14px;
       background: var(--primary);
-      color: #ffffff;
-      font-weight: 800;
+      color: var(--on-primary);
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
       cursor: pointer;
-      transition: background 160ms ease, transform 160ms ease;
+      transition: background 160ms ease, transform 160ms ease, color 160ms ease;
     }
 
     .button:hover,
@@ -274,36 +300,39 @@
     }
 
     .button.secondary {
-      background: #eef2f7;
+      background: transparent;
       color: var(--ink);
+      border: var(--border);
     }
 
     .button.secondary:hover,
     .button.secondary:focus-visible {
-      background: #dfe7f1;
+      background: var(--primary-soft);
     }
 
     .co-card {
-      border-radius: 18px;
+      border-radius: var(--radius);
       padding: 16px;
-      background: #f7faff;
-      border: 1px solid var(--line);
+      background: var(--surface-low);
+      border: var(--border);
     }
 
     .co-card .label {
       color: var(--muted);
-      font-size: 0.88rem;
+      font-size: 12px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.05em;
     }
 
     .co-value {
       display: block;
       margin-top: 4px;
       font-size: 2rem;
-      font-weight: 950;
+      font-weight: 700;
+      font-family: var(--font-mono);
       line-height: 1;
+      letter-spacing: -0.02em;
     }
 
     .co-low { color: var(--low); }
@@ -336,20 +365,24 @@
     }
 
     .state-badge {
-      border-radius: 999px;
+      border-radius: var(--radius);
       padding: 6px 10px;
-      font-size: 0.82rem;
-      font-weight: 800;
-      color: var(--primary-dark);
-      background: var(--primary-soft);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      color: var(--ink);
+      background: var(--surface-container);
+      border: 2px solid var(--line-subtle);
       white-space: nowrap;
     }
 
     .visual-wrap {
-      border-radius: 18px;
-      border: 1px solid var(--line);
-      background: linear-gradient(180deg, #fbfdff 0%, #eef6ff 100%);
-      padding: 10px;
+      border-radius: var(--radius);
+      border: var(--border);
+      background: #252525;
+      padding: 0;
       overflow: hidden;
       transition: filter 180ms ease, opacity 180ms ease;
     }
@@ -360,57 +393,52 @@
       opacity: 0.45;
     }
 
-    svg {
+    /* Stitch-exported saline schematic (400x437) + bolus overlay */
+    .schematic-stage {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+      line-height: 0;
+    }
+
+    .schematic-stage img {
       display: block;
       width: 100%;
       height: auto;
+      vertical-align: top;
     }
 
-    .vessel-path {
+    .schematic-overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    #routePath {
       fill: none;
-      stroke: #79aee8;
-      stroke-width: 18;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      opacity: 0.5;
-    }
-
-    .path-center {
-      fill: none;
-      stroke: #1b6fd8;
-      stroke-width: 4;
-      stroke-dasharray: 8 8;
-      opacity: 0.7;
-    }
-
-    .chamber {
-      fill: #ffffff;
-      stroke: #8db9e8;
-      stroke-width: 2;
-    }
-
-    .chamber-label {
-      fill: #172033;
-      font-size: 13px;
-      font-weight: 800;
-      text-anchor: middle;
+      stroke: transparent;
+      stroke-width: 1;
     }
 
     .saline-dot {
-      fill: #0ea5e9;
-      stroke: #ffffff;
-      stroke-width: 3;
-      filter: drop-shadow(0 4px 8px rgba(14, 165, 233, 0.35));
+      /* fill/stroke set in JS so color can track mixing progress */
+      stroke-width: 2;
+      filter: drop-shadow(0 0 3px rgba(100, 181, 246, 0.55));
     }
 
     .mix-dot {
-      fill: #67e8f9;
+      fill: rgba(187, 222, 251, 0.95);
+      stroke: rgba(21, 101, 192, 0.6);
+      stroke-width: 1;
       opacity: 0;
       transition: opacity 160ms ease;
     }
 
     .mix-dot.is-visible {
-      opacity: 0.85;
+      opacity: 0.92;
     }
 
     .animation-controls {
@@ -425,47 +453,52 @@
     .time-readout {
       color: var(--muted);
       font-weight: 700;
+      font-family: var(--font-mono);
+      font-size: 0.875rem;
     }
 
     .chart-wrap {
       height: 380px;
-      border: 1px solid var(--line);
-      border-radius: 18px;
+      border: var(--border);
+      border-radius: var(--radius);
       padding: 14px;
-      background: #ffffff;
+      background: var(--panel);
       transition: filter 180ms ease, opacity 180ms ease;
     }
 
     .equation-panel {
       margin-top: 16px;
       padding: 14px;
-      border-radius: 16px;
-      background: #f8fbff;
-      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-container);
+      border: 2px solid var(--line-subtle);
       overflow-x: auto;
     }
 
     .equation-panel code {
       white-space: nowrap;
-      font-weight: 800;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
       color: var(--ink);
     }
 
     .equation-panel .unknown {
-      color: var(--primary);
-      background: var(--primary-soft);
-      border-radius: 8px;
+      color: var(--on-primary);
+      background: var(--primary-dark);
+      border-radius: var(--radius);
       padding: 2px 6px;
     }
 
     .notice {
       margin-top: 14px;
-      border-radius: 14px;
+      border-radius: var(--radius);
       padding: 12px;
       background: var(--warning-bg);
-      border: 1px solid var(--warning-line);
-      color: #7a3f00;
+      border: 2px solid var(--warning-line);
+      color: #e65100;
       font-size: 0.92rem;
+      font-weight: 600;
     }
 
     .sr-only {
@@ -498,7 +531,7 @@
 
       .hero,
       .panel {
-        border-radius: 18px;
+        border-radius: var(--radius);
       }
 
       .hero {
@@ -581,56 +614,43 @@
         <section class="panel visual-panel" aria-labelledby="visual-title">
           <div class="panel-title-row">
             <div>
-              <h2 id="visual-title">Vascular Transit Animation</h2>
-              <p class="hint">The cold saline bolus travels faster as calculated cardiac output rises.</p>
+              <h2 id="visual-title">Saline Traversal Schematic</h2>
+              <p class="hint">Cold saline bolus path from injection to femoral detection; loop speed follows cardiac output.</p>
             </div>
             <span class="state-badge" id="durationBadge">Loop: -- s</span>
           </div>
 
           <div class="visual-wrap" id="visualWrap">
-            <svg viewBox="0 0 760 310" role="img" aria-labelledby="svgTitle svgDesc">
-              <title id="svgTitle">Simplified cardiopulmonary transit pathway</title>
-              <desc id="svgDesc">Cold saline moves from the right atrium through the right ventricle and pulmonary circulation to the left atrium.</desc>
-              <path id="routePath" class="vessel-path" d="M85 160 C145 70, 245 70, 300 150 S460 235, 525 155 S635 70, 690 150"></path>
-              <path class="path-center" d="M85 160 C145 70, 245 70, 300 150 S460 235, 525 155 S635 70, 690 150"></path>
-
-              <g>
-                <circle class="chamber" cx="85" cy="160" r="46"></circle>
-                <text class="chamber-label" x="85" y="156">Right</text>
-                <text class="chamber-label" x="85" y="173">Atrium</text>
-              </g>
-              <g>
-                <circle class="chamber" cx="242" cy="102" r="44"></circle>
-                <text class="chamber-label" x="242" y="98">Right</text>
-                <text class="chamber-label" x="242" y="115">Ventricle</text>
-              </g>
-              <g>
-                <rect class="chamber" x="318" y="118" width="112" height="68" rx="24"></rect>
-                <text class="chamber-label" x="374" y="148">Pulmonary</text>
-                <text class="chamber-label" x="374" y="165">Artery</text>
-              </g>
-              <g>
-                <rect class="chamber" x="448" y="176" width="132" height="70" rx="24"></rect>
-                <text class="chamber-label" x="514" y="207">Pulmonary</text>
-                <text class="chamber-label" x="514" y="224">Capillaries</text>
-              </g>
-              <g>
-                <rect class="chamber" x="574" y="88" width="94" height="66" rx="22"></rect>
-                <text class="chamber-label" x="621" y="116">Pulmonary</text>
-                <text class="chamber-label" x="621" y="133">Veins</text>
-              </g>
-              <g>
-                <circle class="chamber" cx="690" cy="150" r="44"></circle>
-                <text class="chamber-label" x="690" y="146">Left</text>
-                <text class="chamber-label" x="690" y="163">Atrium</text>
-              </g>
-
-              <circle class="mix-dot" id="mixDot1" cx="485" cy="194" r="6"></circle>
-              <circle class="mix-dot" id="mixDot2" cx="516" cy="218" r="5"></circle>
-              <circle class="mix-dot" id="mixDot3" cx="548" cy="198" r="6"></circle>
-              <circle class="mix-dot" id="mixDot4" cx="526" cy="236" r="4"></circle>
-              <circle class="saline-dot" id="salineDot" cx="85" cy="160" r="12"></circle>
-            </svg>
+            <div class="schematic-stage">
+              <img
+                src="assets/saline-traversal-schematic.png"
+                width="400"
+                height="437"
+                alt="Saline traversal from superior vena cava injection through right heart, pulmonary circulation, to femoral arterial detection."
+              >
+              <svg
+                class="schematic-overlay"
+                viewBox="0 0 400 437"
+                role="img"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <!--
+                  Vessel centerline (400x437 viewBox): SVC inject → RA → RV → PA → lung →
+                  pulmonary return → LA → LV → aorta → femoral detection. Tangents kept shallow
+                  so getPointAtLength stays inside the drawn vessels on the schematic.
+                -->
+                <path
+                  id="routePath"
+                  d="M 82 54 L 86 66 L 90 78 L 94 92 L 100 108 L 108 126 L 118 144 L 128 162 L 138 182 L 150 198 L 164 210 L 182 216 L 202 212 L 222 200 L 242 184 L 262 166 L 282 148 L 300 134 L 316 128 L 328 132 L 336 142 L 342 156 L 344 172 L 342 188 L 336 202 L 326 214 L 314 222 L 300 224 L 288 218 L 280 208 L 278 196 L 282 184 L 292 174 L 302 168 L 298 176 L 286 188 L 272 198 L 258 192 L 246 180 L 236 168 L 230 158 L 228 154 L 228 162 L 230 178 L 232 198 L 232 218 L 230 238 L 226 258 L 222 278 L 218 302 L 214 328 L 210 356 L 206 382 L 208 402 L 214 418 L 220 428 L 226 432 L 228 432"
+                ></path>
+                <circle class="mix-dot" id="mixDot1" cx="328" cy="172" r="4.5"></circle>
+                <circle class="mix-dot" id="mixDot2" cx="318" cy="196" r="4"></circle>
+                <circle class="mix-dot" id="mixDot3" cx="306" cy="210" r="4.5"></circle>
+                <circle class="mix-dot" id="mixDot4" cx="332" cy="188" r="3.5"></circle>
+                <circle class="saline-dot" id="salineDot" cx="82" cy="54" r="8" fill="#ffffff" stroke="#6d4c41"></circle>
+              </svg>
+            </div>
           </div>
 
           <div class="animation-controls">
@@ -940,7 +960,7 @@
         ctx.beginPath();
         ctx.moveTo(xPixel, chart.chartArea.top);
         ctx.lineTo(xPixel, chart.chartArea.bottom);
-        ctx.strokeStyle = 'rgba(180, 35, 24, 0.8)';
+        ctx.strokeStyle = '#f57c00';
         ctx.lineWidth = 2;
         ctx.setLineDash([6, 6]);
         ctx.stroke();
@@ -957,10 +977,10 @@
             data: [],
             parsing: false,
             label: 'Temperature change',
-            borderColor: '#1b6fd8',
-            backgroundColor: 'rgba(27, 111, 216, 0.16)',
+            borderColor: '#1a1a1a',
+            backgroundColor: 'rgba(26, 26, 26, 0.1)',
             pointRadius: 0,
-            borderWidth: 3,
+            borderWidth: 2,
             tension: 0.35,
             fill: true
           }]
@@ -992,15 +1012,23 @@
               max: TIME_MAX,
               title: {
                 display: true,
-                text: 'Time (seconds)'
-              }
+                text: 'Time (seconds)',
+                color: '#444748',
+                font: { size: 12, weight: '700', family: 'Inter' }
+              },
+              ticks: { color: '#444748', font: { family: 'JetBrains Mono', size: 11 } },
+              grid: { color: '#e0e0e0', lineWidth: 1 }
             },
             y: {
               beginAtZero: true,
               title: {
                 display: true,
-                text: '\u0394Temperature (\u00b0C)'
-              }
+                text: '\u0394Temperature (\u00b0C)',
+                color: '#444748',
+                font: { size: 12, weight: '700', family: 'Inter' }
+              },
+              ticks: { color: '#444748', font: { family: 'JetBrains Mono', size: 11 } },
+              grid: { color: '#e0e0e0', lineWidth: 1 }
             }
           }
         },
@@ -1033,16 +1061,48 @@
       return Math.min(MAX_DURATION, Math.max(MIN_DURATION, 60 / co));
     }
 
+    function smoothstep01(t) {
+      const x = Math.max(0, Math.min(1, t));
+      return x * x * (3 - 2 * x);
+    }
+
+    function lerpByte(a, b, t) {
+      return Math.round(a + (b - a) * t);
+    }
+
+    /** Cold injectate (white) → arterial mixed saline blue along transit progress */
+    function bolusStyleAtProgress(progress) {
+      const u = smoothstep01(progress);
+      const fillR = 255;
+      const fillG = 255;
+      const fillB = 255;
+      const endR = 30;
+      const endG = 136;
+      const endB = 229;
+      const fill = `rgb(${lerpByte(fillR, endR, u)},${lerpByte(fillG, endG, u)},${lerpByte(fillB, endB, u)})`;
+      const s0R = 109;
+      const s0G = 76;
+      const s0B = 65;
+      const s1R = 13;
+      const s1G = 71;
+      const s1B = 161;
+      const stroke = `rgb(${lerpByte(s0R, s1R, u)},${lerpByte(s0G, s1G, u)},${lerpByte(s0B, s1B, u)})`;
+      return { fill, stroke };
+    }
+
     function updateAnimationPosition(progress) {
       const length = routePath.getTotalLength();
       const point = routePath.getPointAtLength(length * progress);
       salineDot.setAttribute('cx', point.x);
       salineDot.setAttribute('cy', point.y);
 
-      const isMixing = progress > 0.54 && progress < 0.78;
-      mixDots.forEach((dot, index) => {
+      const { fill, stroke } = bolusStyleAtProgress(progress);
+      salineDot.setAttribute('fill', fill);
+      salineDot.setAttribute('stroke', stroke);
+
+      const isMixing = progress > 0.26 && progress < 0.54;
+      mixDots.forEach((dot) => {
         dot.classList.toggle('is-visible', isMixing);
-        dot.style.transform = isMixing ? `translate(${Math.sin(progress * 20 + index) * 3}px, ${Math.cos(progress * 18 + index) * 3}px)` : '';
       });
     }
 
@@ -1205,6 +1265,12 @@
     Object.keys(variables).forEach(createVariableRow);
     initChart();
     updateAll();
+    (function syncBolusOverlay() {
+      const activeValues = getActiveValues();
+      const duration = getAnimationDuration(activeValues.co);
+      const p = state.isValid && duration > 0 ? Math.min(1, state.currentTime / duration) : 0;
+      updateAnimationPosition(p);
+    })();
     state.animationFrameId = requestAnimationFrame(animate);
   </script>
 </body>
